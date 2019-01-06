@@ -92,25 +92,11 @@ inline const typename Pointer::element_type* GetRawPointer(const Pointer& p) {
 template <typename Element>
 inline Element* GetRawPointer(Element* p) { return p; }
 
-// This comparator allows linked_ptr to be stored in sets.
-template <typename T>
-struct LinkedPtrLessThan {
-  bool operator()(const ::testing::internal::linked_ptr<T>& lhs,
-                  const ::testing::internal::linked_ptr<T>& rhs) const {
-    return lhs.get() < rhs.get();
-  }
-};
-
-// Symbian compilation can be done with wchar_t being either a native
-// type or a typedef.  Using Google Mock with OpenC without wchar_t
-// should require the definition of _STLP_NO_WCHAR_T.
-//
 // MSVC treats wchar_t as a native type usually, but treats it as the
 // same as unsigned short when the compiler option /Zc:wchar_t- is
 // specified.  It defines _NATIVE_WCHAR_T_DEFINED symbol when wchar_t
 // is a native type.
-#if (GTEST_OS_SYMBIAN && defined(_STLP_NO_WCHAR_T)) || \
-    (defined(_MSC_VER) && !defined(_NATIVE_WCHAR_T_DEFINED))
+#if defined(_MSC_VER) && !defined(_NATIVE_WCHAR_T_DEFINED)
 // wchar_t is a typedef.
 #else
 # define GMOCK_WCHAR_T_IS_NATIVE_ 1
@@ -360,8 +346,6 @@ class WithoutMatchers {
 // Internal use only: access the singleton instance of WithoutMatchers.
 GTEST_API_ WithoutMatchers GetWithoutMatchers();
 
-// FIXME: group all type utilities together.
-
 // Type traits.
 
 // is_reference<T>::value is non-zero iff T is a reference type.
@@ -461,39 +445,17 @@ class StlContainerView<Element[N]> {
   static const_reference ConstReference(const Element (&array)[N]) {
     // Ensures that Element is not a const type.
     testing::StaticAssertTypeEq<Element, RawElement>();
-#if GTEST_OS_SYMBIAN
-    // The Nokia Symbian compiler confuses itself in template instantiation
-    // for this call without the cast to Element*:
-    // function call '[testing::internal::NativeArray<char *>].NativeArray(
-    //     {lval} const char *[4], long, testing::internal::RelationToSource)'
-    //     does not match
-    // 'testing::internal::NativeArray<char *>::NativeArray(
-    //     char *const *, unsigned int, testing::internal::RelationToSource)'
-    // (instantiating: 'testing::internal::ContainsMatcherImpl
-    //     <const char * (&)[4]>::Matches(const char * (&)[4]) const')
-    // (instantiating: 'testing::internal::StlContainerView<char *[4]>::
-    //     ConstReference(const char * (&)[4])')
-    // (and though the N parameter type is mismatched in the above explicit
-    // conversion of it doesn't help - only the conversion of the array).
-    return type(const_cast<Element*>(&array[0]), N,
-                RelationToSourceReference());
-#else
     return type(array, N, RelationToSourceReference());
-#endif  // GTEST_OS_SYMBIAN
   }
   static type Copy(const Element (&array)[N]) {
-#if GTEST_OS_SYMBIAN
-    return type(const_cast<Element*>(&array[0]), N, RelationToSourceCopy());
-#else
     return type(array, N, RelationToSourceCopy());
-#endif  // GTEST_OS_SYMBIAN
   }
 };
 
 // This specialization is used when RawContainer is a native array
 // represented as a (pointer, size) tuple.
 template <typename ElementPointer, typename Size>
-class StlContainerView< ::testing::tuple<ElementPointer, Size> > {
+class StlContainerView< ::std::tuple<ElementPointer, Size> > {
  public:
   typedef GTEST_REMOVE_CONST_(
       typename internal::PointeeOf<ElementPointer>::type) RawElement;
@@ -501,11 +463,12 @@ class StlContainerView< ::testing::tuple<ElementPointer, Size> > {
   typedef const type const_reference;
 
   static const_reference ConstReference(
-      const ::testing::tuple<ElementPointer, Size>& array) {
-    return type(get<0>(array), get<1>(array), RelationToSourceReference());
+      const ::std::tuple<ElementPointer, Size>& array) {
+    return type(std::get<0>(array), std::get<1>(array),
+                RelationToSourceReference());
   }
-  static type Copy(const ::testing::tuple<ElementPointer, Size>& array) {
-    return type(get<0>(array), get<1>(array), RelationToSourceCopy());
+  static type Copy(const ::std::tuple<ElementPointer, Size>& array) {
+    return type(std::get<0>(array), std::get<1>(array), RelationToSourceCopy());
   }
 };
 
@@ -536,7 +499,6 @@ struct BooleanConstant {};
 // reduce code size.
 GTEST_API_ void IllegalDoDefault(const char* file, int line);
 
-#if GTEST_LANG_CXX11
 // Helper types for Apply() below.
 template <size_t... Is> struct int_pack { typedef int_pack type; };
 
@@ -562,7 +524,6 @@ auto Apply(F&& f, Tuple&& args)
   return ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
                    make_int_pack<std::tuple_size<Tuple>::value>());
 }
-#endif
 
 
 #ifdef _MSC_VER

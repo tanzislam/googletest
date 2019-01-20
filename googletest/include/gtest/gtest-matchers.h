@@ -296,6 +296,11 @@ class MatcherBase {
           !internal::IsSame<U, const U&>::value>::type* = nullptr)
       : impl_(new internal::MatcherInterfaceAdapter<U>(impl)) {}
 
+  MatcherBase(const MatcherBase&) = default;
+  MatcherBase& operator=(const MatcherBase&) = default;
+  MatcherBase(MatcherBase&&) = default;
+  MatcherBase& operator=(MatcherBase&&) = default;
+
   virtual ~MatcherBase() {}
 
  private:
@@ -545,22 +550,17 @@ class PolymorphicMatcher {
 
    private:
     const Impl impl_;
-
-    GTEST_DISALLOW_ASSIGN_(MonomorphicImpl);
   };
 
   Impl impl_;
-
-  GTEST_DISALLOW_ASSIGN_(PolymorphicMatcher);
 };
 
-// Creates a matcher from its implementation.  This is easier to use
-// than the Matcher<T> constructor as it doesn't require you to
-// explicitly write the template argument, e.g.
+// Creates a matcher from its implementation.
+// DEPRECATED: Especially in the generic code, prefer:
+//   Matcher<T>(new MyMatcherImpl<const T&>(...));
 //
-//   MakeMatcher(foo);
-// vs
-//   Matcher<const string&>(foo);
+// MakeMatcher may create a Matcher that accepts its argument by value, which
+// leads to unnecessary copies & lack of support for non-copyable types.
 template <typename T>
 inline Matcher<T> MakeMatcher(const MatcherInterface<T>* impl) {
   return Matcher<T>(impl);
@@ -595,7 +595,7 @@ class ComparisonBase {
   explicit ComparisonBase(const Rhs& rhs) : rhs_(rhs) {}
   template <typename Lhs>
   operator Matcher<Lhs>() const {
-    return MakeMatcher(new Impl<Lhs>(rhs_));
+    return Matcher<Lhs>(new Impl<const Lhs&>(rhs_));
   }
 
  private:
@@ -618,10 +618,8 @@ class ComparisonBase {
 
    private:
     Rhs rhs_;
-    GTEST_DISALLOW_ASSIGN_(Impl);
   };
   Rhs rhs_;
-  GTEST_DISALLOW_ASSIGN_(ComparisonBase);
 };
 
 template <typename Rhs>
@@ -724,8 +722,6 @@ class MatchesRegexMatcher {
  private:
   const std::shared_ptr<const RE> regex_;
   const bool full_match_;
-
-  GTEST_DISALLOW_ASSIGN_(MatchesRegexMatcher);
 };
 }  // namespace internal
 

@@ -80,65 +80,6 @@ using std::pair;
 using std::set;
 using std::stringstream;
 using std::vector;
-using testing::_;
-using testing::A;
-using testing::AllArgs;
-using testing::AllOf;
-using testing::An;
-using testing::AnyOf;
-using testing::ByRef;
-using testing::ContainsRegex;
-using testing::DoubleEq;
-using testing::DoubleNear;
-using testing::EndsWith;
-using testing::Eq;
-using testing::ExplainMatchResult;
-using testing::Field;
-using testing::FloatEq;
-using testing::FloatNear;
-using testing::Ge;
-using testing::Gt;
-using testing::HasSubstr;
-using testing::IsEmpty;
-using testing::IsNull;
-using testing::Key;
-using testing::Le;
-using testing::Lt;
-using testing::MakeMatcher;
-using testing::MakePolymorphicMatcher;
-using testing::Matcher;
-using testing::MatcherCast;
-using testing::MatcherInterface;
-using testing::Matches;
-using testing::MatchesRegex;
-using testing::MatchResultListener;
-using testing::NanSensitiveDoubleEq;
-using testing::NanSensitiveDoubleNear;
-using testing::NanSensitiveFloatEq;
-using testing::NanSensitiveFloatNear;
-using testing::Ne;
-using testing::Not;
-using testing::NotNull;
-using testing::Pair;
-using testing::Pointee;
-using testing::Pointwise;
-using testing::PolymorphicMatcher;
-using testing::Property;
-using testing::Ref;
-using testing::ResultOf;
-using testing::SizeIs;
-using testing::StartsWith;
-using testing::StrCaseEq;
-using testing::StrCaseNe;
-using testing::StrEq;
-using testing::StringMatchResultListener;
-using testing::StrNe;
-using testing::Truly;
-using testing::TypedEq;
-using testing::UnorderedPointwise;
-using testing::Value;
-using testing::WhenSorted;
-using testing::WhenSortedBy;
 using testing::internal::DummyMatchResultListener;
 using testing::internal::ElementMatcherPair;
 using testing::internal::ElementMatcherPairs;
@@ -1154,6 +1095,47 @@ TEST(NeTest, CanDescribeSelf) {
   EXPECT_EQ("isn't equal to 5", Describe(m));
 }
 
+class MoveOnly {
+ public:
+  explicit MoveOnly(int i) : i_(i) {}
+  MoveOnly(const MoveOnly&) = delete;
+  MoveOnly(MoveOnly&&) = default;
+  MoveOnly& operator=(const MoveOnly&) = delete;
+  MoveOnly& operator=(MoveOnly&&) = default;
+
+  bool operator==(const MoveOnly& other) const { return i_ == other.i_; }
+  bool operator!=(const MoveOnly& other) const { return i_ != other.i_; }
+  bool operator<(const MoveOnly& other) const { return i_ < other.i_; }
+  bool operator<=(const MoveOnly& other) const { return i_ <= other.i_; }
+  bool operator>(const MoveOnly& other) const { return i_ > other.i_; }
+  bool operator>=(const MoveOnly& other) const { return i_ >= other.i_; }
+
+ private:
+  int i_;
+};
+
+struct MoveHelper {
+  MOCK_METHOD1(Call, void(MoveOnly));
+};
+
+TEST(ComparisonBaseTest, WorksWithMoveOnly) {
+  MoveOnly m{0};
+  MoveHelper helper;
+
+  EXPECT_CALL(helper, Call(Eq(ByRef(m))));
+  helper.Call(MoveOnly(0));
+  EXPECT_CALL(helper, Call(Ne(ByRef(m))));
+  helper.Call(MoveOnly(1));
+  EXPECT_CALL(helper, Call(Le(ByRef(m))));
+  helper.Call(MoveOnly(0));
+  EXPECT_CALL(helper, Call(Lt(ByRef(m))));
+  helper.Call(MoveOnly(-1));
+  EXPECT_CALL(helper, Call(Ge(ByRef(m))));
+  helper.Call(MoveOnly(0));
+  EXPECT_CALL(helper, Call(Gt(ByRef(m))));
+  helper.Call(MoveOnly(1));
+}
+
 // Tests that IsNull() matches any NULL pointer of any type.
 TEST(IsNullTest, MatchesNullPointer) {
   Matcher<int*> m1 = IsNull();
@@ -1507,6 +1489,11 @@ TEST(KeyTest, MatchesCorrectly) {
   EXPECT_THAT(p, Not(Key(Lt(25))));
 }
 
+TEST(KeyTest, WorksWithMoveOnly) {
+  pair<std::unique_ptr<int>, std::unique_ptr<int>> p;
+  EXPECT_THAT(p, Key(Eq(nullptr)));
+}
+
 template <size_t I>
 struct Tag {};
 
@@ -1648,6 +1635,12 @@ TEST(PairTest, MatchesCorrectly) {
   // Neither field matches.
   EXPECT_THAT(p, Not(Pair(13, "bar")));
   EXPECT_THAT(p, Not(Pair(Lt(13), HasSubstr("a"))));
+}
+
+TEST(PairTest, WorksWithMoveOnly) {
+  pair<std::unique_ptr<int>, std::unique_ptr<int>> p;
+  p.second.reset(new int(7));
+  EXPECT_THAT(p, Pair(Eq(nullptr), Ne(nullptr)));
 }
 
 TEST(PairTest, SafelyCastsInnerMatchers) {
@@ -2301,6 +2294,15 @@ TEST(Ne2Test, MatchesUnequalArguments) {
 TEST(Ne2Test, CanDescribeSelf) {
   Matcher<const Tuple2&> m = Ne();
   EXPECT_EQ("are an unequal pair", Describe(m));
+}
+
+TEST(PairMatchBaseTest, WorksWithMoveOnly) {
+  using Pointers = std::tuple<std::unique_ptr<int>, std::unique_ptr<int>>;
+  Matcher<Pointers> matcher = Eq();
+  Pointers pointers;
+  // Tested values don't matter; the point is that matcher does not copy the
+  // matched values.
+  EXPECT_TRUE(matcher.Matches(pointers));
 }
 
 // Tests that FloatEq() matches a 2-tuple where
@@ -6625,47 +6627,51 @@ TEST(UnorderedPointwiseTest, WorksWithMoveOnly) {
 
 // Sample optional type implementation with minimal requirements for use with
 // Optional matcher.
-class SampleOptionalInt {
+template <typename T>
+class SampleOptional {
  public:
-  typedef int value_type;
-  explicit SampleOptionalInt(int value) : value_(value), has_value_(true) {}
-  SampleOptionalInt() : value_(0), has_value_(false) {}
-  operator bool() const {
-    return has_value_;
-  }
-  const int& operator*() const {
-    return value_;
-  }
+  using value_type = T;
+  explicit SampleOptional(T value)
+      : value_(std::move(value)), has_value_(true) {}
+  SampleOptional() : value_(), has_value_(false) {}
+  operator bool() const { return has_value_; }
+  const T& operator*() const { return value_; }
+
  private:
-  int value_;
+  T value_;
   bool has_value_;
 };
 
 TEST(OptionalTest, DescribesSelf) {
-  const Matcher<SampleOptionalInt> m = Optional(Eq(1));
+  const Matcher<SampleOptional<int>> m = Optional(Eq(1));
   EXPECT_EQ("value is equal to 1", Describe(m));
 }
 
 TEST(OptionalTest, ExplainsSelf) {
-  const Matcher<SampleOptionalInt> m = Optional(Eq(1));
-  EXPECT_EQ("whose value 1 matches", Explain(m, SampleOptionalInt(1)));
-  EXPECT_EQ("whose value 2 doesn't match", Explain(m, SampleOptionalInt(2)));
+  const Matcher<SampleOptional<int>> m = Optional(Eq(1));
+  EXPECT_EQ("whose value 1 matches", Explain(m, SampleOptional<int>(1)));
+  EXPECT_EQ("whose value 2 doesn't match", Explain(m, SampleOptional<int>(2)));
 }
 
 TEST(OptionalTest, MatchesNonEmptyOptional) {
-  const Matcher<SampleOptionalInt> m1 = Optional(1);
-  const Matcher<SampleOptionalInt> m2 = Optional(Eq(2));
-  const Matcher<SampleOptionalInt> m3 = Optional(Lt(3));
-  SampleOptionalInt opt(1);
+  const Matcher<SampleOptional<int>> m1 = Optional(1);
+  const Matcher<SampleOptional<int>> m2 = Optional(Eq(2));
+  const Matcher<SampleOptional<int>> m3 = Optional(Lt(3));
+  SampleOptional<int> opt(1);
   EXPECT_TRUE(m1.Matches(opt));
   EXPECT_FALSE(m2.Matches(opt));
   EXPECT_TRUE(m3.Matches(opt));
 }
 
 TEST(OptionalTest, DoesNotMatchNullopt) {
-  const Matcher<SampleOptionalInt> m = Optional(1);
-  SampleOptionalInt empty;
+  const Matcher<SampleOptional<int>> m = Optional(1);
+  SampleOptional<int> empty;
   EXPECT_FALSE(m.Matches(empty));
+}
+
+TEST(OptionalTest, WorksWithMoveOnly) {
+  Matcher<SampleOptional<std::unique_ptr<int>>> m = Optional(Eq(nullptr));
+  EXPECT_TRUE(m.Matches(SampleOptional<std::unique_ptr<int>>(nullptr)));
 }
 
 class SampleVariantIntString {
@@ -6995,10 +7001,6 @@ class PredicateFormatterFromMatcherTest : public ::testing::Test {
         matcher);
     return predicate_formatter("dummy-name", behavior);
   }
-
-  const std::string kMatcherType =
-      "testing::gmock_matchers_test::PredicateFormatterFromMatcherTest::"
-      "Behavior";
 };
 
 TEST_F(PredicateFormatterFromMatcherTest, ShortCircuitOnSuccess) {

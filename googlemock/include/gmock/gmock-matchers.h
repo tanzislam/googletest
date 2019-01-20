@@ -128,9 +128,9 @@ class MatcherCastImpl {
     return CastImpl(
         polymorphic_matcher_or_value,
         BooleanConstant<
-            internal::ImplicitlyConvertible<M, Matcher<T> >::value>(),
+            std::is_convertible<M, Matcher<T> >::value>(),
         BooleanConstant<
-            internal::ImplicitlyConvertible<M, T>::value>());
+            std::is_convertible<M, T>::value>());
   }
 
  private:
@@ -268,8 +268,8 @@ class SafeMatcherCastImpl {
   template <typename U>
   static inline Matcher<T> Cast(const Matcher<U>& matcher) {
     // Enforce that T can be implicitly converted to U.
-    GTEST_COMPILE_ASSERT_((internal::ImplicitlyConvertible<T, U>::value),
-                          T_must_be_implicitly_convertible_to_U);
+    GTEST_COMPILE_ASSERT_((std::is_convertible<T, U>::value),
+                          "T must be implicitly convertible to U");
     // Enforce that we are not converting a non-reference type T to a reference
     // type U.
     GTEST_COMPILE_ASSERT_(
@@ -900,7 +900,7 @@ class PairMatchBase {
  public:
   template <typename T1, typename T2>
   operator Matcher<::std::tuple<T1, T2>>() const {
-    return MakeMatcher(new Impl<::std::tuple<T1, T2>>);
+    return Matcher<::std::tuple<T1, T2>>(new Impl<const ::std::tuple<T1, T2>&>);
   }
   template <typename T1, typename T2>
   operator Matcher<const ::std::tuple<T1, T2>&>() const {
@@ -2535,7 +2535,8 @@ class KeyMatcher {
 
   template <typename PairType>
   operator Matcher<PairType>() const {
-    return MakeMatcher(new KeyMatcherImpl<PairType>(matcher_for_key_));
+    return Matcher<PairType>(
+        new KeyMatcherImpl<const PairType&>(matcher_for_key_));
   }
 
  private:
@@ -2640,9 +2641,8 @@ class PairMatcher {
 
   template <typename PairType>
   operator Matcher<PairType> () const {
-    return MakeMatcher(
-        new PairMatcherImpl<PairType>(
-            first_matcher_, second_matcher_));
+    return Matcher<PairType>(
+        new PairMatcherImpl<const PairType&>(first_matcher_, second_matcher_));
   }
 
  private:
@@ -3205,7 +3205,7 @@ class OptionalMatcher {
 
   template <typename Optional>
   operator Matcher<Optional>() const {
-    return MakeMatcher(new Impl<Optional>(value_matcher_));
+    return Matcher<Optional>(new Impl<const Optional&>(value_matcher_));
   }
 
   template <typename Optional>

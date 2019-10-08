@@ -53,7 +53,7 @@
 // lifespan of the pointed values.
 
 class FooTest : public ::testing::TestWithParam<const char*> {
-  // You can implement all the usual class fixture members here.
+    // You can implement all the usual class fixture members here.
 };
 
 // Then, use the TEST_P macro to define as many parameterized tests
@@ -61,14 +61,14 @@ class FooTest : public ::testing::TestWithParam<const char*> {
 // or "pattern", whichever you prefer to think.
 
 TEST_P(FooTest, DoesBlah) {
-  // Inside a test, access the test parameter with the GetParam() method
-  // of the TestWithParam<T> class:
-  EXPECT_TRUE(foo.Blah(GetParam()));
-  ...
+    // Inside a test, access the test parameter with the GetParam() method
+    // of the TestWithParam<T> class:
+    EXPECT_TRUE(foo.Blah(GetParam()));
+    ...
 }
 
 TEST_P(FooTest, HasBlahBlah) {
-  ...
+    ...
 }
 
 // Finally, you can use INSTANTIATE_TEST_SUITE_P to instantiate the test
@@ -155,21 +155,21 @@ INSTANTIATE_TEST_SUITE_P(AnotherInstantiationName, FooTest, ValuesIn(pets));
 // separately from Test and WithParamInterface. For example:
 
 class BaseTest : public ::testing::Test {
-  // You can inherit all the usual members for a non-parameterized test
-  // fixture here.
+    // You can inherit all the usual members for a non-parameterized test
+    // fixture here.
 };
 
 class DerivedTest : public BaseTest, public ::testing::WithParamInterface<int> {
-  // The usual test fixture members go here too.
+    // The usual test fixture members go here too.
 };
 
 TEST_F(BaseTest, HasFoo) {
-  // This is an ordinary non-parameterized test.
+    // This is an ordinary non-parameterized test.
 }
 
 TEST_P(DerivedTest, DoesBlah) {
-  // GetParam works just the same here as if you inherit from TestWithParam.
-  EXPECT_TRUE(foo.Blah(GetParam()));
+    // GetParam works just the same here as if you inherit from TestWithParam.
+    EXPECT_TRUE(foo.Blah(GetParam()));
 }
 
 #endif  // 0
@@ -227,13 +227,13 @@ namespace testing {
 //
 template <typename T, typename IncrementT>
 internal::ParamGenerator<T> Range(T start, T end, IncrementT step) {
-  return internal::ParamGenerator<T>(
-      new internal::RangeGenerator<T, IncrementT>(start, end, step));
+    return internal::ParamGenerator<T>(
+               new internal::RangeGenerator<T, IncrementT>(start, end, step));
 }
 
 template <typename T>
 internal::ParamGenerator<T> Range(T start, T end) {
-  return Range(start, end, 1);
+    return Range(start, end, 1);
 }
 
 // ValuesIn() function allows generation of tests with parameters coming from
@@ -293,22 +293,22 @@ internal::ParamGenerator<T> Range(T start, T end) {
 //
 template <typename ForwardIterator>
 internal::ParamGenerator<
-    typename std::iterator_traits<ForwardIterator>::value_type>
+typename std::iterator_traits<ForwardIterator>::value_type>
 ValuesIn(ForwardIterator begin, ForwardIterator end) {
-  typedef typename std::iterator_traits<ForwardIterator>::value_type ParamType;
-  return internal::ParamGenerator<ParamType>(
-      new internal::ValuesInIteratorRangeGenerator<ParamType>(begin, end));
+    typedef typename std::iterator_traits<ForwardIterator>::value_type ParamType;
+    return internal::ParamGenerator<ParamType>(
+               new internal::ValuesInIteratorRangeGenerator<ParamType>(begin, end));
 }
 
 template <typename T, size_t N>
 internal::ParamGenerator<T> ValuesIn(const T (&array)[N]) {
-  return ValuesIn(array, array + N);
+    return ValuesIn(array, array + N);
 }
 
 template <class Container>
 internal::ParamGenerator<typename Container::value_type> ValuesIn(
     const Container& container) {
-  return ValuesIn(container.begin(), container.end());
+    return ValuesIn(container.begin(), container.end());
 }
 
 // Values() allows generating tests from explicitly specified list of
@@ -333,7 +333,7 @@ internal::ParamGenerator<typename Container::value_type> ValuesIn(
 //
 template <typename... T>
 internal::ValueArray<T...> Values(T... v) {
-  return internal::ValueArray<T...>(std::move(v)...);
+    return internal::ValueArray<T...>(std::move(v)...);
 }
 
 // Bool() allows generating tests with parameters in a set of (false, true).
@@ -357,7 +357,7 @@ internal::ValueArray<T...> Values(T... v) {
 // INSTANTIATE_TEST_SUITE_P(BoolSequence, FlagDependentTest, Bool());
 //
 inline internal::ParamGenerator<bool> Bool() {
-  return Values(false, true);
+    return Values(false, true);
 }
 
 // Combine() allows the user to combine two or more sequences to produce
@@ -408,7 +408,7 @@ inline internal::ParamGenerator<bool> Bool() {
 //
 template <typename... Generator>
 internal::CartesianProductHolder<Generator...> Combine(const Generator&... g) {
-  return internal::CartesianProductHolder<Generator...>(g...);
+    return internal::CartesianProductHolder<Generator...>(g...);
 }
 
 #define TEST_P(test_suite_name, test_name)                                     \

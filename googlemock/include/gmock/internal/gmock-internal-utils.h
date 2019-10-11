@@ -27,7 +27,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 // Google Mock - a framework for writing C++ mock classes.
 //
 // This file defines some utilities useful for implementing Google
@@ -40,9 +39,11 @@
 #define GMOCK_INCLUDE_GMOCK_INTERNAL_GMOCK_INTERNAL_UTILS_H_
 
 #include <stdio.h>
+
 #include <ostream>  // NOLINT
 #include <string>
 #include <type_traits>
+
 #include "gmock/internal/gmock-port.h"
 #include "gtest/gtest.h"
 
@@ -56,9 +57,9 @@ namespace internal {
 // Silence MSVC C4100 (unreferenced formal parameter) and
 // C4805('==': unsafe mix of type 'const int' and type 'const bool')
 #ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4100)
-# pragma warning(disable:4805)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#pragma warning(disable : 4805)
 #endif
 
 // Joins a vector of strings as if they are fields of a tuple; returns
@@ -77,14 +78,14 @@ GTEST_API_ std::string ConvertIdentifierNameToWords(const char* id_name);
 // smart pointer.
 template <typename Pointer>
 struct PointeeOf {
-    // Smart pointer classes define type element_type as the type of
-    // their pointees.
-    typedef typename Pointer::element_type type;
+  // Smart pointer classes define type element_type as the type of
+  // their pointees.
+  typedef typename Pointer::element_type type;
 };
 // This specialization is for the raw pointer case.
 template <typename T>
 struct PointeeOf<T*> {
-    typedef T type;
+  typedef T type;
 };  // NOLINT
 
 // GetRawPointer(p) returns the raw pointer underlying p when p is a
@@ -92,12 +93,12 @@ struct PointeeOf<T*> {
 // The following default implementation is for the smart pointer case.
 template <typename Pointer>
 inline const typename Pointer::element_type* GetRawPointer(const Pointer& p) {
-    return p.get();
+  return p.get();
 }
 // This overloaded version is for the raw pointer case.
 template <typename Element>
 inline Element* GetRawPointer(Element* p) {
-    return p;
+  return p;
 }
 
 // MSVC treats wchar_t as a native type usually, but treats it as the
@@ -107,7 +108,7 @@ inline Element* GetRawPointer(Element* p) {
 #if defined(_MSC_VER) && !defined(_NATIVE_WCHAR_T_DEFINED)
 // wchar_t is a typedef.
 #else
-# define GMOCK_WCHAR_T_IS_NATIVE_ 1
+#define GMOCK_WCHAR_T_IS_NATIVE_ 1
 #endif
 
 // In what follows, we use the term "kind" to indicate whether a type
@@ -115,18 +116,20 @@ inline Element* GetRawPointer(Element* p) {
 // or none of them.  This categorization is useful for determining
 // when a matcher argument type can be safely converted to another
 // type in the implementation of SafeMatcherCast.
-enum TypeKind {
-    kBool, kInteger, kFloatingPoint, kOther
-};
+enum TypeKind { kBool, kInteger, kFloatingPoint, kOther };
 
 // KindOf<T>::value is the kind of type T.
-template <typename T> struct KindOf {
-    enum { value = kOther };  // The default kind.
+template <typename T>
+struct KindOf {
+  enum { value = kOther };  // The default kind.
 };
 
 // This macro declares that the kind of 'type' is 'kind'.
 #define GMOCK_DECLARE_KIND_(type, kind) \
-  template <> struct KindOf<type> { enum { value = kind }; }
+  template <>                           \
+  struct KindOf<type> {                 \
+    enum { value = kind };              \
+  }
 
 GMOCK_DECLARE_KIND_(bool, kBool);
 
@@ -134,11 +137,11 @@ GMOCK_DECLARE_KIND_(bool, kBool);
 GMOCK_DECLARE_KIND_(char, kInteger);
 GMOCK_DECLARE_KIND_(signed char, kInteger);
 GMOCK_DECLARE_KIND_(unsigned char, kInteger);
-GMOCK_DECLARE_KIND_(short, kInteger);  // NOLINT
+GMOCK_DECLARE_KIND_(short, kInteger);           // NOLINT
 GMOCK_DECLARE_KIND_(unsigned short, kInteger);  // NOLINT
 GMOCK_DECLARE_KIND_(int, kInteger);
 GMOCK_DECLARE_KIND_(unsigned int, kInteger);
-GMOCK_DECLARE_KIND_(long, kInteger);  // NOLINT
+GMOCK_DECLARE_KIND_(long, kInteger);           // NOLINT
 GMOCK_DECLARE_KIND_(unsigned long, kInteger);  // NOLINT
 
 #if GMOCK_WCHAR_T_IS_NATIVE_
@@ -157,7 +160,7 @@ GMOCK_DECLARE_KIND_(long double, kFloatingPoint);
 #undef GMOCK_DECLARE_KIND_
 
 // Evaluates to the kind of 'type'.
-#define GMOCK_KIND_OF_(type) \
+#define GMOCK_KIND_OF_(type)                   \
   static_cast< ::testing::internal::TypeKind>( \
       ::testing::internal::KindOf<type>::value)
 
@@ -201,13 +204,13 @@ struct LosslessArithmeticConvertibleImpl<kInteger, From, kBool, bool>
 template <typename From, typename To>
 struct LosslessArithmeticConvertibleImpl<kInteger, From, kInteger, To>
     : public bool_constant<
-// When converting from a smaller size to a larger size, we are
-// fine as long as we are not converting from signed to unsigned.
-  ((sizeof(From) < sizeof(To)) &&
-   (!GMOCK_IS_SIGNED_(From) || GMOCK_IS_SIGNED_(To))) ||
-  // When converting between the same size, the signedness must match.
-  ((sizeof(From) == sizeof(To)) &&
-   (GMOCK_IS_SIGNED_(From) == GMOCK_IS_SIGNED_(To)))> {};  // NOLINT
+          // When converting from a smaller size to a larger size, we are
+          // fine as long as we are not converting from signed to unsigned.
+          ((sizeof(From) < sizeof(To)) &&
+           (!GMOCK_IS_SIGNED_(From) || GMOCK_IS_SIGNED_(To))) ||
+          // When converting between the same size, the signedness must match.
+          ((sizeof(From) == sizeof(To)) &&
+           (GMOCK_IS_SIGNED_(From) == GMOCK_IS_SIGNED_(To)))> {};  // NOLINT
 
 #undef GMOCK_IS_SIGNED_
 
@@ -230,9 +233,9 @@ struct LosslessArithmeticConvertibleImpl<kFloatingPoint, From, kInteger, To>
 // Converting a floating-point to another floating-point is lossless
 // if and only if the target type is at least as big as the source type.
 template <typename From, typename To>
-struct LosslessArithmeticConvertibleImpl<
-    kFloatingPoint, From, kFloatingPoint, To>
-: public bool_constant<sizeof(From) <= sizeof(To)> {};  // NOLINT
+struct LosslessArithmeticConvertibleImpl<kFloatingPoint, From, kFloatingPoint,
+                                         To>
+    : public bool_constant<sizeof(From) <= sizeof(To)> {};  // NOLINT
 
 // LosslessArithmeticConvertible<From, To>::value is true if and only if
 // arithmetic type From can be losslessly converted to arithmetic type To.
@@ -243,23 +246,22 @@ struct LosslessArithmeticConvertibleImpl<
 // implementation-defined when the above pre-condition is violated.
 template <typename From, typename To>
 struct LosslessArithmeticConvertible
-    : public LosslessArithmeticConvertibleImpl<
-  GMOCK_KIND_OF_(From), From, GMOCK_KIND_OF_(To), To> {};  // NOLINT
+    : public LosslessArithmeticConvertibleImpl<GMOCK_KIND_OF_(From), From,
+                                               GMOCK_KIND_OF_(To), To> {
+};  // NOLINT
 
 // This interface knows how to report a Google Mock failure (either
 // non-fatal or fatal).
 class FailureReporterInterface {
-public:
-    // The type of a failure (either non-fatal or fatal).
-    enum FailureType {
-        kNonfatal, kFatal
-    };
+ public:
+  // The type of a failure (either non-fatal or fatal).
+  enum FailureType { kNonfatal, kFatal };
 
-    virtual ~FailureReporterInterface() {}
+  virtual ~FailureReporterInterface() {}
 
-    // Reports a failure that occurred at the given source file location.
-    virtual void ReportFailure(FailureType type, const char* file, int line,
-                               const std::string& message) = 0;
+  // Reports a failure that occurred at the given source file location.
+  virtual void ReportFailure(FailureType type, const char* file, int line,
+                             const std::string& message) = 0;
 };
 
 // Returns the failure reporter used by Google Mock.
@@ -272,33 +274,30 @@ GTEST_API_ FailureReporterInterface* GetFailureReporter();
 // trace.
 inline void Assert(bool condition, const char* file, int line,
                    const std::string& msg) {
-    if (!condition) {
-        GetFailureReporter()->ReportFailure(FailureReporterInterface::kFatal,
-                                            file, line, msg);
-    }
+  if (!condition) {
+    GetFailureReporter()->ReportFailure(FailureReporterInterface::kFatal, file,
+                                        line, msg);
+  }
 }
 inline void Assert(bool condition, const char* file, int line) {
-    Assert(condition, file, line, "Assertion failed.");
+  Assert(condition, file, line, "Assertion failed.");
 }
 
 // Verifies that condition is true; generates a non-fatal failure if
 // condition is false.
 inline void Expect(bool condition, const char* file, int line,
                    const std::string& msg) {
-    if (!condition) {
-        GetFailureReporter()->ReportFailure(FailureReporterInterface::kNonfatal,
-                                            file, line, msg);
-    }
+  if (!condition) {
+    GetFailureReporter()->ReportFailure(FailureReporterInterface::kNonfatal,
+                                        file, line, msg);
+  }
 }
 inline void Expect(bool condition, const char* file, int line) {
-    Expect(condition, file, line, "Expectation failed.");
+  Expect(condition, file, line, "Expectation failed.");
 }
 
 // Severity level of a log.
-enum LogSeverity {
-    kInfo = 0,
-    kWarning = 1
-};
+enum LogSeverity { kInfo = 0, kWarning = 1 };
 
 // Valid values for the --gmock_verbose flag.
 
@@ -330,9 +329,9 @@ GTEST_API_ void Log(LogSeverity severity, const std::string& message,
 //    ON_CALL(mock, Method({}, nullptr))...
 //
 class WithoutMatchers {
-private:
-    WithoutMatchers() {}
-    friend GTEST_API_ WithoutMatchers GetWithoutMatchers();
+ private:
+  WithoutMatchers() {}
+  friend GTEST_API_ WithoutMatchers GetWithoutMatchers();
 };
 
 // Internal use only: access the singleton instance of WithoutMatchers.
@@ -341,8 +340,8 @@ GTEST_API_ WithoutMatchers GetWithoutMatchers();
 // Disable MSVC warnings for infinite recursion, since in this case the
 // the recursion is unreachable.
 #ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable:4717)
+#pragma warning(push)
+#pragma warning(disable : 4717)
 #endif
 
 // Invalid<T>() is usable as an expression of type T, but will terminate
@@ -352,15 +351,15 @@ GTEST_API_ WithoutMatchers GetWithoutMatchers();
 // crashes).
 template <typename T>
 inline T Invalid() {
-    Assert(false, "", -1, "Internal error: attempt to return invalid value");
-    // This statement is unreachable, and would never terminate even if it
-    // could be reached. It is provided only to placate compiler warnings
-    // about missing return statements.
-    return Invalid<T>();
+  Assert(false, "", -1, "Internal error: attempt to return invalid value");
+  // This statement is unreachable, and would never terminate even if it
+  // could be reached. It is provided only to placate compiler warnings
+  // about missing return statements.
+  return Invalid<T>();
 }
 
 #ifdef _MSC_VER
-# pragma warning(pop)
+#pragma warning(pop)
 #endif
 
 // Given a raw type (i.e. having no top-level reference or const
@@ -381,79 +380,78 @@ inline T Invalid() {
 // STL-style container.
 template <class RawContainer>
 class StlContainerView {
-public:
-    typedef RawContainer type;
-    typedef const type& const_reference;
+ public:
+  typedef RawContainer type;
+  typedef const type& const_reference;
 
-    static const_reference ConstReference(const RawContainer& container) {
-        static_assert(!std::is_const<RawContainer>::value,
-                      "RawContainer type must not be const");
-        return container;
-    }
-    static type Copy(const RawContainer& container) {
-        return container;
-    }
+  static const_reference ConstReference(const RawContainer& container) {
+    static_assert(!std::is_const<RawContainer>::value,
+                  "RawContainer type must not be const");
+    return container;
+  }
+  static type Copy(const RawContainer& container) { return container; }
 };
 
 // This specialization is used when RawContainer is a native array type.
 template <typename Element, size_t N>
 class StlContainerView<Element[N]> {
-public:
-    typedef typename std::remove_const<Element>::type RawElement;
-    typedef internal::NativeArray<RawElement> type;
-    // NativeArray<T> can represent a native array either by value or by
-    // reference (selected by a constructor argument), so 'const type'
-    // can be used to reference a const native array.  We cannot
-    // 'typedef const type& const_reference' here, as that would mean
-    // ConstReference() has to return a reference to a local variable.
-    typedef const type const_reference;
+ public:
+  typedef typename std::remove_const<Element>::type RawElement;
+  typedef internal::NativeArray<RawElement> type;
+  // NativeArray<T> can represent a native array either by value or by
+  // reference (selected by a constructor argument), so 'const type'
+  // can be used to reference a const native array.  We cannot
+  // 'typedef const type& const_reference' here, as that would mean
+  // ConstReference() has to return a reference to a local variable.
+  typedef const type const_reference;
 
-    static const_reference ConstReference(const Element (&array)[N]) {
-        static_assert(std::is_same<Element, RawElement>::value,
-                      "Element type must not be const");
-        return type(array, N, RelationToSourceReference());
-    }
-    static type Copy(const Element (&array)[N]) {
-        return type(array, N, RelationToSourceCopy());
-    }
+  static const_reference ConstReference(const Element (&array)[N]) {
+    static_assert(std::is_same<Element, RawElement>::value,
+                  "Element type must not be const");
+    return type(array, N, RelationToSourceReference());
+  }
+  static type Copy(const Element (&array)[N]) {
+    return type(array, N, RelationToSourceCopy());
+  }
 };
 
 // This specialization is used when RawContainer is a native array
 // represented as a (pointer, size) tuple.
 template <typename ElementPointer, typename Size>
 class StlContainerView< ::std::tuple<ElementPointer, Size> > {
-public:
-    typedef typename std::remove_const<
-    typename internal::PointeeOf<ElementPointer>::type>::type RawElement;
-    typedef internal::NativeArray<RawElement> type;
-    typedef const type const_reference;
+ public:
+  typedef typename std::remove_const<
+      typename internal::PointeeOf<ElementPointer>::type>::type RawElement;
+  typedef internal::NativeArray<RawElement> type;
+  typedef const type const_reference;
 
-    static const_reference ConstReference(
-        const ::std::tuple<ElementPointer, Size>& array) {
-        return type(std::get<0>(array), std::get<1>(array),
-                    RelationToSourceReference());
-    }
-    static type Copy(const ::std::tuple<ElementPointer, Size>& array) {
-        return type(std::get<0>(array), std::get<1>(array), RelationToSourceCopy());
-    }
+  static const_reference ConstReference(
+      const ::std::tuple<ElementPointer, Size>& array) {
+    return type(std::get<0>(array), std::get<1>(array),
+                RelationToSourceReference());
+  }
+  static type Copy(const ::std::tuple<ElementPointer, Size>& array) {
+    return type(std::get<0>(array), std::get<1>(array), RelationToSourceCopy());
+  }
 };
 
 // The following specialization prevents the user from instantiating
 // StlContainer with a reference type.
-template <typename T> class StlContainerView<T&>;
+template <typename T>
+class StlContainerView<T&>;
 
 // A type transform to remove constness from the first part of a pair.
 // Pairs like that are used as the value_type of associative containers,
 // and this transform produces a similar but assignable pair.
 template <typename T>
 struct RemoveConstFromKey {
-    typedef T type;
+  typedef T type;
 };
 
 // Partially specialized to remove constness from std::pair<const K, V>.
 template <typename K, typename V>
 struct RemoveConstFromKey<std::pair<const K, V> > {
-    typedef std::pair<K, V> type;
+  typedef std::pair<K, V> type;
 };
 
 // Emit an assertion failure due to incorrect DoDefault() usage. Out-of-lined to
@@ -463,16 +461,16 @@ GTEST_API_ void IllegalDoDefault(const char* file, int line);
 template <typename F, typename Tuple, size_t... Idx>
 auto ApplyImpl(F&& f, Tuple&& args, IndexSequence<Idx...>) -> decltype(
     std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(args))...)) {
-    return std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(args))...);
+  return std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(args))...);
 }
 
 // Apply the function to a tuple of arguments.
 template <typename F, typename Tuple>
 auto Apply(F&& f, Tuple&& args)
--> decltype(ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
-                      MakeIndexSequence<std::tuple_size<Tuple>::value>())) {
-    return ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
-                     MakeIndexSequence<std::tuple_size<Tuple>::value>());
+    -> decltype(ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
+                          MakeIndexSequence<std::tuple_size<Tuple>::value>())) {
+  return ApplyImpl(std::forward<F>(f), std::forward<Tuple>(args),
+                   MakeIndexSequence<std::tuple_size<Tuple>::value>());
 }
 
 // Template struct Function<F>, where F must be a function type, contains
@@ -493,21 +491,21 @@ struct Function;
 
 template <typename R, typename... Args>
 struct Function<R(Args...)> {
-    using Result = R;
-    static constexpr size_t ArgumentCount = sizeof...(Args);
-    template <size_t I>
-    using Arg = ElemFromList<I, Args...>;
-    using ArgumentTuple = std::tuple<Args...>;
-    using ArgumentMatcherTuple = std::tuple<Matcher<Args>...>;
-    using MakeResultVoid = void(Args...);
-    using MakeResultIgnoredValue = IgnoredValue(Args...);
+  using Result = R;
+  static constexpr size_t ArgumentCount = sizeof...(Args);
+  template <size_t I>
+  using Arg = ElemFromList<I, Args...>;
+  using ArgumentTuple = std::tuple<Args...>;
+  using ArgumentMatcherTuple = std::tuple<Matcher<Args>...>;
+  using MakeResultVoid = void(Args...);
+  using MakeResultIgnoredValue = IgnoredValue(Args...);
 };
 
 template <typename R, typename... Args>
 constexpr size_t Function<R(Args...)>::ArgumentCount;
 
 #ifdef _MSC_VER
-# pragma warning(pop)
+#pragma warning(pop)
 #endif
 
 }  // namespace internal

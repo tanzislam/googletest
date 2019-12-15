@@ -96,14 +96,6 @@ INSTANTIATE_TEST_SUITE_P(PrintingFailingParams,
                          FailingParamTest,
                          testing::Values(2));
 
-// Tests that an empty value for the test suite basename yields just
-// the test name without any prior /
-class EmptyBasenameParamInst : public testing::TestWithParam<int> {};
-
-TEST_P(EmptyBasenameParamInst, Passes) { EXPECT_EQ(1, GetParam()); }
-
-INSTANTIATE_TEST_SUITE_P(, EmptyBasenameParamInst, testing::Values(1));
-
 static const char kGoldenString[] = "\"Line\0 1\"\nLine 2";
 
 TEST(NonfatalFailureTest, EscapesStringOperands) {
@@ -789,6 +781,13 @@ INSTANTIATE_TEST_SUITE_P(PrintingStrings,
                          ParamTest,
                          testing::Values(std::string("a")),
                          ParamNameFunc);
+
+// fails under kErrorOnUninstantiatedParameterizedTest=true
+class DetectNotInstantiatedTest : public testing::TestWithParam<int> {};
+TEST_P(DetectNotInstantiatedTest, Used) { }
+
+// This would make the test failure from the above go away.
+// INSTANTIATE_TEST_SUITE_P(Fix, DetectNotInstantiatedTest, testing::Values(1));
 
 // This #ifdef block tests the output of typed tests.
 #if GTEST_HAS_TYPED_TEST

@@ -3161,7 +3161,7 @@ static void PrintTestPartResult(const TestPartResult& test_part_result) {
 
 // class PrettyUnitTestResultPrinter
 #if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE && \
-    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT && !GTEST_OS_WINDOWS_MINGW
+    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
 
 // Returns the character attribute for the given color.
 static WORD GetColorAttribute(GTestColor color) {
@@ -3207,7 +3207,7 @@ static WORD GetNewColor(GTestColor color, WORD old_color_attrs) {
   return new_color;
 }
 
-#else
+#endif  // GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
 
 // Returns the ANSI color code for the given color. GTestColor::kDefault is
 // an invalid input.
@@ -3224,14 +3224,20 @@ static const char* GetAnsiColorCode(GTestColor color) {
   }
 }
 
-#endif  // GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
+static void EmitAnsiColorOutput(GTestColor color,
+                                const char* fmt,
+                                va_list args) {
+  printf("\033[0;3%sm", GetAnsiColorCode(color));
+  vprintf(fmt, args);
+  printf("\033[m");  // Resets the terminal to default.
+}
 
 // Returns true if and only if Google Test should use colors in the output.
 bool ShouldUseColor(bool stdout_is_tty) {
   const char* const gtest_color = GTEST_FLAG(color).c_str();
 
   if (String::CaseInsensitiveCStringEquals(gtest_color, "auto")) {
-#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MINGW
+#if GTEST_OS_WINDOWS
     // On Windows the TERM variable is usually not set, but the
     // console there does support colors.
     return stdout_is_tty;
@@ -3276,8 +3282,8 @@ static void ColoredPrintf(GTestColor color, const char* fmt, ...) {
     GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT || defined(ESP_PLATFORM)
   const bool use_color = AlwaysFalse();
 #else
-  static const bool in_color_mode =
-      ShouldUseColor(posix::IsATTY(posix::FileNo(stdout)) != 0);
+  static const bool stdout_is_tty = posix::IsATTY(posix::FileNo(stdout)) != 0;
+  static const bool in_color_mode = ShouldUseColor(stdout_is_tty);
   const bool use_color = in_color_mode && (color != GTestColor::kDefault);
 #endif  // GTEST_OS_WINDOWS_MOBILE || GTEST_OS_ZOS
 
@@ -3288,30 +3294,37 @@ static void ColoredPrintf(GTestColor color, const char* fmt, ...) {
   }
 
 #if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE && \
-    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT && !GTEST_OS_WINDOWS_MINGW
-  const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    !GTEST_OS_WINDOWS_PHONE && !GTEST_OS_WINDOWS_RT
+# if GTEST_OS_WINDOWS_MINGW
+  static const bool using_mingw = AlwaysTrue();
+# else
+  static const bool using_mingw = AlwaysFalse();
+# endif
+  if (!using_mingw || stdout_is_tty) {
+    const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-  // Gets the current text color.
-  CONSOLE_SCREEN_BUFFER_INFO buffer_info;
-  GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
-  const WORD old_color_attrs = buffer_info.wAttributes;
-  const WORD new_color = GetNewColor(color, old_color_attrs);
+    // Gets the current text color.
+    CONSOLE_SCREEN_BUFFER_INFO buffer_info;
+    GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
+    const WORD old_color_attrs = buffer_info.wAttributes;
+    const WORD new_color = GetNewColor(color, old_color_attrs);
 
-  // We need to flush the stream buffers into the console before each
-  // SetConsoleTextAttribute call lest it affect the text that is already
-  // printed but has not yet reached the console.
-  fflush(stdout);
-  SetConsoleTextAttribute(stdout_handle, new_color);
+    // We need to flush the stream buffers into the console before each
+    // SetConsoleTextAttribute call lest it affect the text that is already
+    // printed but has not yet reached the console.
+    fflush(stdout);
+    SetConsoleTextAttribute(stdout_handle, new_color);
 
-  vprintf(fmt, args);
+    vprintf(fmt, args);
 
-  fflush(stdout);
-  // Restores the text color.
-  SetConsoleTextAttribute(stdout_handle, old_color_attrs);
+    fflush(stdout);
+    // Restores the text color.
+    SetConsoleTextAttribute(stdout_handle, old_color_attrs);
+  } else if (using_mingw) {
+    EmitAnsiColorOutput(color, fmt, args);
+  }
 #else
-  printf("\033[0;3%sm", GetAnsiColorCode(color));
-  vprintf(fmt, args);
-  printf("\033[m");  // Resets the terminal to default.
+  EmitAnsiColorOutput(color, fmt, args);
 #endif  // GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MOBILE
   va_end(args);
 }
@@ -6301,6 +6314,11 @@ static const char kColorEncodedHelpMessage[] =
     "  @G--" GTEST_FLAG_PREFIX_
     "color=@Y(@Gyes@Y|@Gno@Y|@Gauto@Y)@D\n"
     "      Enable/disable colored output. The default is @Gauto@D.\n"
+# if GTEST_OS_WINDOWS_MINGW
+    "      With MinGW builds, color output will use the Windows Console API\n"
+    "      only if stdout is a TTY, otherwise it uses ANSI escape sequences.\n"
+    "      This means under mintty you need @G--gtest_color=yes@D for color.\n"
+# endif
     "  @G--" GTEST_FLAG_PREFIX_
     "brief=1@D\n"
     "      Only print test failures.\n"

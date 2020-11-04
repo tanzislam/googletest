@@ -6317,7 +6317,8 @@ static const char kColorEncodedHelpMessage[] =
 # if GTEST_OS_WINDOWS_MINGW
     "      With MinGW builds, color output will use the Windows Console API\n"
     "      only if stdout is a TTY, otherwise it uses ANSI escape sequences.\n"
-    "      This means under mintty you need @G--gtest_color=yes@D for color.\n"
+    "      This means under mintty you need @G--" GTEST_FLAG_PREFIX_
+    "color=yes@D for color.\n"
 # endif
     "  @G--" GTEST_FLAG_PREFIX_
     "brief=1@D\n"

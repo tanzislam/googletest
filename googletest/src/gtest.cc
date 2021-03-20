@@ -1566,14 +1566,15 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
                                      double val1,
                                      double val2,
                                      double abs_error) {
-  const double diff = fabs(val1 - val2);
+  const double diff = std::fabs(val1 - val2);
   if (diff <= abs_error) return AssertionSuccess();
 
   // Find the value which is closest to zero.
-  const double min_abs = std::min(fabs(val1), fabs(val2));
+  const double min_abs = std::min(std::fabs(val1), std::fabs(val2));
   // Find the distance to the next double from that value.
   const double epsilon =
-      nextafter(min_abs, std::numeric_limits<double>::infinity()) - min_abs;
+      std::nextafter(min_abs, std::numeric_limits<double>::infinity())
+      - min_abs;
   // Detect the case where abs_error is so small that EXPECT_NEAR is
   // effectively the same as EXPECT_EQUAL, and give an informative error
   // message so that the situation can be more easily understood without
